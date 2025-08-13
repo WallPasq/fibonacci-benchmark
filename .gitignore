@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+
+# Python
+.venv
+__pycache__
+.pytest_cache
+
+# Rust
+target
