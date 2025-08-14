@@ -4,7 +4,8 @@ from src.strategies.recursive import Recursive
 
 def test_recursive_strategy_conforms_to_protocol():
     """Verify that the recursive strategy implements the FibonacciStrategy protocol."""
-    assert isinstance(Recursive, FibonacciStrategy)
+    strategy = Recursive()
+    assert isinstance(strategy, FibonacciStrategy)
 
 
 def test_recursive_strategy_calculates_correctly():

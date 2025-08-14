@@ -4,7 +4,8 @@ from src.strategies.protocol import FibonacciStrategy
 
 def test_iterative_strategy_conforms_to_protocol():
     """Verify that the iterative strategy implements the FibonacciStrategy protocol."""
-    assert isinstance(Iterative, FibonacciStrategy)
+    strategy = Iterative()
+    assert isinstance(strategy, FibonacciStrategy)
 
 
 def test_iterative_strategy_calculates_correctly():
