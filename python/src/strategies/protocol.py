@@ -19,6 +19,16 @@ class FibonacciStrategy(Protocol):
 class CacheableFibonacciStrategy(FibonacciStrategy, Protocol):
     """Defines the common interface for Fibonacci calculation strategies that have caching (like memoization)."""
 
+    _cache: list[int]
+
     def clear_cache(self) -> None:
         """Clears the cache, being able to keep the base cases (0 and 1) or completely clear the cache."""
+        ...
+
+    def cache_size(self) -> int:
+        """Returns the total number of values in the cache."""
+        ...
+
+    def get_cache_value(self, n: int) -> int:
+        """Returns a value that is stored in the cache by its index."""
         ...

@@ -1,4 +1,5 @@
 import pytest
+
 from src.discovery import load_strategies
 from src.strategies.protocol import CacheableFibonacciStrategy, FibonacciStrategy
 
@@ -20,14 +21,14 @@ def test_strategy_clearing_cache(strategy: CacheableFibonacciStrategy):
     """Verify that clearing the cache actually clears the cache."""
     strategy.calculate(10)
     strategy.clear_cache()
-    assert len(strategy._cache) == 2  # type: ignore
+    assert strategy.cache_size() == 2
 
 
 @pytest.mark.parametrize("strategy", all_cache_fib_strategies)
 def test_strategy_creates_and_stores_cache(strategy: CacheableFibonacciStrategy):
     """Verifies that the strategy creates and stores the cache correctly."""
-    assert len(strategy._cache) == 2  # type: ignore
+    assert strategy.cache_size() == 2
     strategy.calculate(10)
-    assert strategy._cache[10] == 55  # type: ignore
+    assert strategy.get_cache_value(10) == 55
     strategy.calculate(20)
-    assert strategy._cache[20] == 6_765  # type: ignore
+    assert strategy.get_cache_value(20) == 6_765
