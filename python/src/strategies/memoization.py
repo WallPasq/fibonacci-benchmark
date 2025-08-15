@@ -1,4 +1,4 @@
-from .protocol import CacheableFibonacciStrategy
+from src.strategies.protocol import CacheableFibonacciStrategy
 
 
 class Memoization(CacheableFibonacciStrategy):

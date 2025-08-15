@@ -40,6 +40,7 @@ def load_strategies() -> tuple[
         if path.name.startswith(("_", ".")) or path.name == protocol_file:
             continue
 
+        # If you change the folder structure or move the strategies files, you will have to change this variable.
         module_name: str = f"src.{MODULE_BASE}.{path.stem}"
         module: ModuleType = importlib.import_module(module_name)
 

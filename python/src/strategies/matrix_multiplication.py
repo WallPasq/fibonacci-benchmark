@@ -1,4 +1,4 @@
-from .protocol import FibonacciStrategy
+from src.strategies.protocol import FibonacciStrategy
 
 Matrix = list[list[int]]
 

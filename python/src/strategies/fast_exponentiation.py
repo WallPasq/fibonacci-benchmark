@@ -1,5 +1,5 @@
-from .matrix_multiplication import MatrixMultiplication
-from .protocol import FibonacciStrategy
+from src.strategies.matrix_multiplication import MatrixMultiplication
+from src.strategies.protocol import FibonacciStrategy
 
 Matrix = list[list[int]]
 
