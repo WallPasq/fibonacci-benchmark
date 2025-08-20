@@ -1,6 +1,8 @@
+from typing import TypeAlias
+
 from src.strategies.protocol import FibonacciStrategy
 
-Matrix = list[list[int]]
+Matrix: TypeAlias = list[list[int]]
 
 
 class MatrixMultiplication(FibonacciStrategy):

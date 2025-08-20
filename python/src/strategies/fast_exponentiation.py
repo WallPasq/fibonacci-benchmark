@@ -1,7 +1,5 @@
-from src.strategies.matrix_multiplication import MatrixMultiplication
+from src.strategies.matrix_multiplication import Matrix, MatrixMultiplication
 from src.strategies.protocol import FibonacciStrategy
-
-Matrix = list[list[int]]
 
 
 class FastExponentiation(MatrixMultiplication, FibonacciStrategy):
