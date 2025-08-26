@@ -15,7 +15,7 @@ class Iterative(FibonacciStrategy):
         a: int = 0
         b: int = 1
 
-        for _ in range(n):
+        for _ in range(n - 1):
             a, b = b, a + b
 
-        return a
+        return b

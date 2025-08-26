@@ -14,7 +14,7 @@ class FastExponentiation(MatrixMultiplication, FibonacciStrategy):
         if n < 1:
             raise ValueError("n must be greater than 0.")
 
-        n_power: int = n
+        n_power: int = n - 1
         base: Matrix = a.copy()
         result: Matrix = [[1, 0], [0, 1]]
 

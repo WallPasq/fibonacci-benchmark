@@ -30,7 +30,7 @@ class MatrixMultiplication(FibonacciStrategy):
 
         result: Matrix = a.copy()
 
-        for _ in range(n - 1):
+        for _ in range(n - 2):
             result = self._multiply(result, a)
 
         return result
@@ -41,4 +41,4 @@ class MatrixMultiplication(FibonacciStrategy):
 
         result: Matrix = [[1, 1], [1, 0]]
         result = self._power(result, n)
-        return result[1][0]
+        return result[0][0]
