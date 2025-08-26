@@ -20,6 +20,9 @@ class Memoization(CacheableFibonacciStrategy):
         return self._cache[n]
 
     def calculate(self, n: int) -> int:
+        if n < 0:
+            raise ValueError("n must be greater than or equal to 0.")
+
         if n < self.cache_size():
             return self.get_cache_value(n)
 

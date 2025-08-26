@@ -31,6 +31,15 @@ def test_strategy_calculates_correctly(strategy: FibonacciStrategy):
     )
 
 
+@pytest.mark.parametrize("strategy", all_fib_strategies)
+def test_strategy_returns_a_value_error_if_n_is_less_than_zero(
+    strategy: FibonacciStrategy,
+):
+    """Tests if the strategy returns an error if the value passed is less than 0."""
+    with pytest.raises(ValueError, match="must be greater than or equal to 0."):
+        strategy.calculate(-1)
+
+
 @pytest.mark.parametrize("strategy", all_cache_fib_strategies)
 def test_strategy_clearing_cache(strategy: CacheableFibonacciStrategy):
     """Verify that clearing the cache actually clears the cache."""

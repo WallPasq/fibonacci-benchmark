@@ -25,9 +25,6 @@ class MatrixMultiplication(FibonacciStrategy):
 
     def _power(self, a: Matrix, n: int) -> Matrix:
         """Calculates the product of a 2x2 matrix multiplied by itself n times."""
-        if n < 1:
-            raise ValueError("n must be greater than 0.")
-
         result: Matrix = a.copy()
 
         for _ in range(n - 2):
@@ -36,6 +33,9 @@ class MatrixMultiplication(FibonacciStrategy):
         return result
 
     def calculate(self, n: int) -> int:
+        if n < 0:
+            raise ValueError("n must be greater than or equal to 0.")
+
         if n <= 1:
             return n
 
