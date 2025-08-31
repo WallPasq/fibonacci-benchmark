@@ -10,7 +10,7 @@ class Memoization(CacheableFibonacciStrategy):
     def name(self) -> str:
         return "Memoization"
 
-    def clear_cache(self) -> None:
+    def clear_cache(self):
         self._cache = [0, 1]
 
     def cache_size(self) -> int:

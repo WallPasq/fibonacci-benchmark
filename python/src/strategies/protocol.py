@@ -21,7 +21,7 @@ class CacheableFibonacciStrategy(FibonacciStrategy, Protocol):
 
     _cache: list[int]
 
-    def clear_cache(self) -> None:
+    def clear_cache(self):
         """Clears the cache, being able to keep the base cases (0 and 1) or completely clear the cache."""
         ...
 
