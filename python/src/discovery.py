@@ -7,6 +7,7 @@ from src.strategies.protocol import CacheableFibonacciStrategy, FibonacciStrateg
 
 # If you rename the strategies folder, you will have to change this constant.
 MODULE_BASE: str = "strategies"
+PROTOCOL_FILE: str = f"{FibonacciStrategy.__module__.split('.')[-1]}.py"
 
 
 class NoStrategiesFoundError(Exception):
@@ -34,10 +35,9 @@ def load_strategies() -> tuple[
     # If you change the folder structure or move this file, you will have to change this variable.
     strategies_dir: Path = Path(__file__).parent / MODULE_BASE
     found_strategies: dict[str, FibonacciStrategy] = {}
-    protocol_file: str = f"{FibonacciStrategy.__module__.split('.')[-1]}.py"
 
     for path in strategies_dir.glob("*.py"):
-        if path.name.startswith(("_", ".")) or path.name == protocol_file:
+        if path.name.startswith(("_", ".")) or path.name == PROTOCOL_FILE:
             continue
 
         # If you change the folder structure or move the strategies files, you will have to change this variable.
@@ -66,15 +66,3 @@ def load_strategies() -> tuple[
             all_fib_strategies.append(strategy)
 
     return all_fib_strategies, all_cache_fib_strategies
-
-
-if __name__ == "__main__":
-    all_fib_strategies, all_cache_fib_strategies = load_strategies()
-
-    if all_cache_fib_strategies:
-        names: list[str] = [strategy.name for strategy in all_cache_fib_strategies]
-        print("Loaded cacheable Fibonacci strategies:", ", ".join(names))
-
-    if all_fib_strategies:
-        names: list[str] = [strategy.name for strategy in all_fib_strategies]
-        print("Loaded Fibonacci strategies (without cache):", ", ".join(names))
