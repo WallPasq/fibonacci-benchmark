@@ -10,12 +10,9 @@ from unittest.mock import Mock
 import pytest
 from pytest_mock import MockerFixture
 
-from src.discovery import (
-    MODULE_BASE,
-    PROTOCOL_FILE,
-    NoStrategiesFoundError,
-    load_strategies,
-)
+from core.constants import MODULE_BASE, MODULE_NAME, PROTOCOL_FILE
+from core.exceptions import NoStrategiesFoundError
+from src.discovery import load_strategies
 from src.strategies.protocol import CacheableFibonacciStrategy, FibonacciStrategy
 
 
@@ -23,7 +20,7 @@ class MockFibonacciStrategy(FibonacciStrategy):
     """A mock for the FibonacciStrategy class, to perform tests without relying on the actual files."""
 
     # Mock to return the name that corresponds to the function's operation.
-    __module__: str = f"src.{MODULE_BASE}.mocked_fibonacci"
+    __module__: str = MODULE_NAME.format(file_name="mocked_fibonacci")
 
     @property
     def name(self) -> str:
@@ -37,7 +34,7 @@ class MockCacheableFibonacciStrategy(CacheableFibonacciStrategy):
     """A mock for the CacheableFibonacciStrategy class, to perform tests without relying on the actual files."""
 
     # Mock to return the name that corresponds to the function's operation.
-    __module__: str = f"src.{MODULE_BASE}.mocked_cacheable_fibonacci"
+    __module__: str = MODULE_NAME.format(file_name="mocked_cacheable_fibonacci")
 
     @property
     def name(self) -> str:
@@ -62,7 +59,7 @@ class NotAStrategy:
     pass
 
 
-def setup_strategy_discovery_mocks(
+def _setup_strategy_discovery_mocks(
     tmp_path: Path,
     mocker: MockerFixture,
     files_content: Optional[list[tuple[str, str]]] = None,
@@ -153,7 +150,7 @@ def test_load_strategies_successfully(tmp_path: Path, mocker: MockerFixture):
         ),  # It should not be imported, as it does not follow the FibonacciStrategy protocol.
     ]
 
-    setup_strategy_discovery_mocks(tmp_path, mocker, files_content)
+    _setup_strategy_discovery_mocks(tmp_path, mocker, files_content)
     fib_strategies, cache_fib_strategies = load_strategies()
 
     assert len(fib_strategies) == 1, (
@@ -177,7 +174,7 @@ def test_load_strategies_when_no_strategies_are_found(
     Tests whether the NoStrategiesFoundError exception is raised when the directory is empty.
     """
 
-    setup_strategy_discovery_mocks(tmp_path, mocker)
+    _setup_strategy_discovery_mocks(tmp_path, mocker)
 
     with pytest.raises(NoStrategiesFoundError, match="No strategies loaded."):
         load_strategies()

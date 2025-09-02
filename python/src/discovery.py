@@ -3,17 +3,9 @@ import inspect
 from pathlib import Path
 from types import ModuleType
 
+from core.constants import MODULE_BASE, MODULE_NAME, PROTOCOL_FILE
+from core.exceptions import NoStrategiesFoundError
 from src.strategies.protocol import CacheableFibonacciStrategy, FibonacciStrategy
-
-# If you rename the strategies folder, you will have to change this constant.
-MODULE_BASE: str = "strategies"
-PROTOCOL_FILE: str = f"{FibonacciStrategy.__module__.split('.')[-1]}.py"
-
-
-class NoStrategiesFoundError(Exception):
-    """Raised when no Fibonacci strategies are discovered."""
-
-    pass
 
 
 def load_strategies() -> tuple[
@@ -41,7 +33,7 @@ def load_strategies() -> tuple[
             continue
 
         # If you change the folder structure or move the strategies files, you will have to change this variable.
-        module_name: str = f"src.{MODULE_BASE}.{path.stem}"
+        module_name: str = MODULE_NAME.format(file_name=path.stem)
         module: ModuleType = importlib.import_module(module_name)
 
         for _, obj in inspect.getmembers(module, inspect.isclass):

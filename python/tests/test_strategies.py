@@ -3,11 +3,11 @@ import pytest
 from src.discovery import load_strategies
 from src.strategies.protocol import CacheableFibonacciStrategy, FibonacciStrategy
 
-all_fib_strategies, all_cache_fib_strategies = load_strategies()
-all_fib_strategies += all_cache_fib_strategies
+_all_fib_strategies, _all_cache_fib_strategies = load_strategies()
+_all_fib_strategies += _all_cache_fib_strategies
 
 
-@pytest.mark.parametrize("strategy", all_fib_strategies)
+@pytest.mark.parametrize("strategy", _all_fib_strategies)
 def test_strategy_calculates_correctly(strategy: FibonacciStrategy):
     """Test some known Fibonacci values."""
     fibonacci0: int = strategy.calculate(0)
@@ -31,7 +31,7 @@ def test_strategy_calculates_correctly(strategy: FibonacciStrategy):
     )
 
 
-@pytest.mark.parametrize("strategy", all_fib_strategies)
+@pytest.mark.parametrize("strategy", _all_fib_strategies)
 def test_strategy_returns_a_value_error_if_n_is_less_than_zero(
     strategy: FibonacciStrategy,
 ):
@@ -40,7 +40,7 @@ def test_strategy_returns_a_value_error_if_n_is_less_than_zero(
         strategy.calculate(-1)
 
 
-@pytest.mark.parametrize("strategy", all_cache_fib_strategies)
+@pytest.mark.parametrize("strategy", _all_cache_fib_strategies)
 def test_strategy_clearing_cache(strategy: CacheableFibonacciStrategy):
     """Verify that clearing the cache actually clears the cache."""
     strategy.calculate(10)
@@ -50,7 +50,7 @@ def test_strategy_clearing_cache(strategy: CacheableFibonacciStrategy):
     )
 
 
-@pytest.mark.parametrize("strategy", all_cache_fib_strategies)
+@pytest.mark.parametrize("strategy", _all_cache_fib_strategies)
 def test_strategy_creates_and_stores_cache(strategy: CacheableFibonacciStrategy):
     """Verifies that the strategy creates and stores the cache correctly."""
     assert strategy.cache_size() == 2, (

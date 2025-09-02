@@ -1,4 +1,5 @@
-from src.strategies.matrix_multiplication import Matrix, MatrixMultiplication
+from core.types import Matrix
+from src.strategies.matrix_multiplication import MatrixMultiplication
 from src.strategies.protocol import FibonacciStrategy
 
 
