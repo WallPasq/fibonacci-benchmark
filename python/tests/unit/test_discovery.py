@@ -130,11 +130,11 @@ def test_load_strategies_successfully(tmp_path: Path, mocker: MockerFixture):
     files_content: list[tuple[str, str]] = [
         (
             "mocked_fibonacci.py",
-            "from tests.test_discovery import MockFibonacciStrategy",
+            "from tests.unit.test_discovery import MockFibonacciStrategy",
         ),  # It should be classified as FibonacciStrategy.
         (
             "mocked_cacheable_fibonacci.py",
-            "from tests.test_discovery import MockCacheableFibonacciStrategy",
+            "from tests.unit.test_discovery import MockCacheableFibonacciStrategy",
         ),  # It should be classified as CacheableFibonacciStrategy.
         (
             PROTOCOL_FILE,
@@ -146,7 +146,7 @@ def test_load_strategies_successfully(tmp_path: Path, mocker: MockerFixture):
         ),  # It should be ignored, because it starts with .
         (
             "not_a_strategy.py",
-            "from tests.test_discovery import NotAStrategy",
+            "from tests.unit.test_discovery import NotAStrategy",
         ),  # It should not be imported, as it does not follow the FibonacciStrategy protocol.
     ]
 
