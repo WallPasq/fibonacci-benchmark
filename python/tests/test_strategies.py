@@ -46,7 +46,7 @@ def test_strategy_clearing_cache(strategy: CacheableFibonacciStrategy):
     strategy.calculate(10)
     strategy.clear_cache()
     assert strategy.cache_size() == 2, (
-        f"The cache size of {strategy.name} is expected to be 2 after cleaning, got {strategy.cache_size()}."
+        f"The cache size of {strategy.name} is expected to be 2 after clearing, got {strategy.cache_size()}."
     )
 
 
