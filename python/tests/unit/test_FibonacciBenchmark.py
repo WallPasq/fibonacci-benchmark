@@ -1,8 +1,6 @@
 from itertools import chain, repeat
 from math import isclose
-from multiprocessing import Process
-from multiprocessing.connection import Connection
-from typing import Callable, Iterator, cast
+from typing import Iterator
 from unittest.mock import Mock
 
 import pytest
@@ -11,128 +9,91 @@ from pytest_mock import MockerFixture
 from core.exceptions import TimeoutSignal
 from core.types import ResultType
 from src.benchmark import FibonacciBenchmark
-from src.strategies.protocol import CacheableFibonacciStrategy, FibonacciStrategy
+from tests.mocks import NUM_DIGITS_LARGE_NUMBER
+from tests.unit.conftest import setup_FibonacciBenchmark
 
 
-class MockFibonacciStrategy(FibonacciStrategy):
-    """A mock for the FibonacciStrategy class."""
+def _assert_parent_send_calls(
+    parent_mock: Mock,
+    process_mock: Mock,
+    strategy_calculate: Mock,
+    expected_ns: list[int],
+):
+    """Helper function to assert calls to parent.send."""
+    expected_total_calls: int = len(expected_ns) + 1
+    assert parent_mock.send.call_count == expected_total_calls, (
+        f"Expected {expected_total_calls} calls to send, but found {parent_mock.send.call_count:,}"
+    )
 
-    @property
-    def name(self) -> str:
-        return "Mocked Fibonacci"
+    for i, n in enumerate(expected_ns):
+        value_sent = parent_mock.send.call_args_list[i][0][0]
+        assert value_sent == (strategy_calculate, (n,)), (
+            f"Mismatch in call {i + 1}: expected ({strategy_calculate.__qualname__}, ({n},)), got {value_sent}"
+        )
 
-    def calculate(self, n: int) -> int:
-        return n
+    last_value_sent = parent_mock.send.call_args_list[-1][0][0]
+    assert last_value_sent is None, (
+        f"Expected last call to be None, but got {last_value_sent}"
+    )
 
-
-class MockCacheableFibonacciStrategy(CacheableFibonacciStrategy):
-    """A mock for the CacheableFibonacciStrategy class."""
-
-    _cache: list[int] = []
-    clear_cache_call_count: int = 0
-
-    @property
-    def name(self) -> str:
-        return "Mocked Cacheable Fibonacci"
-
-    def calculate(self, n: int) -> int:
-        return n
-
-    def clear_cache(self):
-        self.clear_cache_call_count += 1
-
-    def cache_size(self) -> int:
-        return 0
-
-    def get_cache_value(self, n: int) -> int:
-        return n
+    assert process_mock.join.call_count == 1, (
+        "The join method of the process should have been called once to close it, "
+        f"but it was called {process_mock.join.call_count:,} times."
+    )
 
 
-def _mocked_enter_context_manager(self: FibonacciBenchmark) -> FibonacciBenchmark:
-    """
-    A mocked __enter__ for the FibonacciBenchmark context manager,
-    to avoid creating a Connection and Process.
-    """
-    return self
-
-
-def test_FibonacciBenchmark_run_successful(mocker: MockerFixture):
+def test_FibonacciBenchmark_FibonacciStrategy_run_successful(mocker: MockerFixture):
     """
     Tests that `FibonacciBenchmark.run` correctly finds the optimal `n`
-    based on a series of mocked worker execution times.
+    based on a series of mock worker execution times.
     """
-    strategy: MockFibonacciStrategy = MockFibonacciStrategy()
-    mocker.patch.object(FibonacciBenchmark, "__enter__", _mocked_enter_context_manager)
-    benchmark: FibonacciBenchmark = FibonacciBenchmark(
-        strategy=strategy, num_runs=1, timeout=1
-    )
-    benchmark.parent = Mock(spec=Connection)
-    benchmark.process = Mock(spec=Process)
+    benchmark, strategy, parent, process = setup_FibonacciBenchmark(mocker)
 
-    benchmark.parent.recv.side_effect = [0.5, 0.9, 1.2, 0.99, 1.2]
+    parent.recv.side_effect = [0.5, 0.9, 1.2, 0.99, 1.2]
     best_n, num_digits = benchmark.run()
 
     assert best_n == 3, (
         "Due to the defined return times in recv.side_effect, "
         f"the result should have been 3, but it was {best_n:,}."
     )
-
     assert num_digits == 1, (
-        f"The number of digits in 3 is 1, but it obtained {num_digits:,}."
+        f"The number of digits in 2 is 1, but it obtained {num_digits:,}."
     )
 
-    assert benchmark.process.join.call_count == 1, (
-        "The join method of the process should have been called once to close it, "
-        f"but it was called {benchmark.process.join.call_count:,} times."
-    )
-
-    send_number_calls: int = len(benchmark.parent.send.call_args_list)
-    assert send_number_calls == 6, (
-        "It was expected that 6 calls would be made to the send method, "
-        f"but {send_number_calls:,} were made."
-    )
-
-    # Expected returns from _exponential_search and _binary_search
-    for i, n in enumerate([1, 2, 4, 3, 4]):
-        value_sent: tuple[Callable[[int], int], int] = (
-            benchmark.parent.send.call_args_list[i][0][0]
-        )
-        assert value_sent == (strategy.calculate, (n,)), (
-            f"The {i + 1}th call to the send method should have sent the"
-            f"tuple (MockFibonacciStrategy.calculate, {n:,}), but it sent {value_sent} instead."
-        )
-
-    value_sent = benchmark.parent.send.call_args_list[-1][0][0]
-    assert value_sent is None, (
-        f"The last call to the send method should have sent None, but it sent {value_sent} instead."
-    )
+    expected_ns: list[int] = [1, 2, 4, 3, 4]
+    _assert_parent_send_calls(parent, process, strategy.calculate, expected_ns)
 
 
-def test_FibonacciBenchmark_clear_cache_CacheableFibonacciStrategy(
+def test_FibonacciBenchmark_CacheableFibonacciStrategy_clear_cache_and_run_successful(
     mocker: MockerFixture,
 ):
     """
     Tests that `clear_cache` is called on a `CacheableFibonacciStrategy`
-    before each run to ensure fair measurements.
+    before each run to ensure fair measurements and if it correctly finds
+    the optimal `n` based on a series of mock worker execution times.
     """
-    strategy: MockCacheableFibonacciStrategy = MockCacheableFibonacciStrategy()
-    mocker.patch.object(FibonacciBenchmark, "__enter__", _mocked_enter_context_manager)
-    benchmark: FibonacciBenchmark = FibonacciBenchmark(
-        strategy=strategy, num_runs=1, timeout=1
+    benchmark, strategy, parent, process = setup_FibonacciBenchmark(
+        mocker, is_cacheable=True
     )
-    benchmark.parent = Mock(spec=Connection)
-    benchmark.process = Mock(spec=Process)
 
-    benchmark.parent.recv.side_effect = [0.5, 0.9, 1.2, 0.99, 1.2]
-    benchmark.run()
-    clear_cache_call_count: int = cast(
-        MockCacheableFibonacciStrategy, benchmark.strategy
-    ).clear_cache_call_count
+    parent.recv.side_effect = [0.5, 0.9, 1.2, 0.99, 1.2]
+    best_n, num_digits = benchmark.run()
 
-    assert clear_cache_call_count == 5, (
+    assert best_n == 3, (
+        "Due to the defined return times in recv.side_effect, "
+        f"the result should have been 3, but it was {best_n:,}."
+    )
+    assert num_digits == 1, (
+        f"The number of digits in 2 is 1, but it obtained {num_digits:,}."
+    )
+
+    assert strategy.clear_cache.call_count == 5, (
         "The clear_cache method of CacheableFibonacciStrategy should be called 5 times, "
-        f"but it was called {clear_cache_call_count:,} times."
+        f"but it was called {strategy.clear_cache.call_count:,} times."
     )
+
+    expected_ns: list[int] = [1, 2, 4, 3, 4]
+    _assert_parent_send_calls(parent, process, strategy.calculate, expected_ns)
 
 
 def test_FibonacciBenchmark_raises_ValueError(mocker: MockerFixture):
@@ -140,139 +101,57 @@ def test_FibonacciBenchmark_raises_ValueError(mocker: MockerFixture):
     Tests that `FibonacciBenchmark.run` correctly propagates exceptions
     received from the worker process.
     """
-    strategy: MockFibonacciStrategy = MockFibonacciStrategy()
-    mocker.patch.object(FibonacciBenchmark, "__enter__", _mocked_enter_context_manager)
-    benchmark: FibonacciBenchmark = FibonacciBenchmark(
-        strategy=strategy, num_runs=1, timeout=1
-    )
-    benchmark.parent = Mock(spec=Connection)
-    benchmark.process = Mock(spec=Process)
+    benchmark, strategy, parent, process = setup_FibonacciBenchmark(mocker)
 
     # This needs to be done so that Mock sends the exception using the send command instead of raising it.
-    simulated_error: ValueError = ValueError("Simulated error.")
+    simulated_error = ValueError("Simulated error.")
     recv_side_effect: Iterator[ResultType] = iter([0.5, 0.8, 0.9, simulated_error])
-    benchmark.parent.recv.side_effect = lambda: next(recv_side_effect)
+    parent.recv.side_effect = lambda: next(recv_side_effect)
 
-    # Should return an error when testing 8 in _exponential_search
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Simulated error."):
         benchmark.run()
 
-    assert benchmark.process.join.call_count == 1, (
-        "The join method of the process should have been called once to close it, "
-        f"but it was called {benchmark.process.join.call_count:,} times."
-    )
-
-    send_number_calls: int = len(benchmark.parent.send.call_args_list)
-    assert send_number_calls == 5, (
-        "It was expected that 5 calls would be made to the send method, "
-        f"but {send_number_calls:,} were made."
-    )
-
-    # Expected returns from _exponential_search
-    for i, n in enumerate([1, 2, 4, 8]):
-        value_sent: tuple[Callable[[int], int], int] = (
-            benchmark.parent.send.call_args_list[i][0][0]
-        )
-        assert value_sent == (strategy.calculate, (n,)), (
-            f"The {i + 1}th call to the send method should have sent the"
-            f"tuple (MockFibonacciStrategy.calculate, {n:,}), but it sent {value_sent} instead."
-        )
-
-    value_sent = benchmark.parent.send.call_args_list[-1][0][0]
-    assert value_sent is None, (
-        f"The last call to the send method should have sent None, but it sent {value_sent} instead."
-    )
+    expected_ns: list[int] = [1, 2, 4, 8]
+    _assert_parent_send_calls(parent, process, strategy.calculate, expected_ns)
 
 
-def test_FibonacciBenchmark_handles_TimeoutSignal_correctly(mocker: MockerFixture):
+def test_FibonacciBenchmark_run_handles_timeouts_and_verifies_large_number_digits(
+    mocker: MockerFixture,
+):
     """
-    Tests that `_get_median_runtime` correctly handles `TimeoutSignal` by
-    ignoring timed-out runs when calculating the median.
+    Tests whether `FibonacciBenchmark.run` correctly identifies the last successful `n`,
+    calculates the number of digits for its large result, and whether the average execution
+    time calculation ignores `TimeoutSignal` exceptions.
     """
-    strategy: MockFibonacciStrategy = MockFibonacciStrategy()
-    mocker.patch.object(FibonacciBenchmark, "__enter__", _mocked_enter_context_manager)
+    benchmark, strategy, parent, process = setup_FibonacciBenchmark(mocker, num_runs=3)
 
-    # Mock get_median_runtimes to store the returned medians.
-    medians: list[float] = []
-    real_get_median_runtime: Callable[[FibonacciBenchmark, int], int] = getattr(
-        FibonacciBenchmark, "_get_median_runtime"
-    )
+    # Creates a spy to obtain the values returned by _get_median_runtime.
+    spy_get_median_runtime = mocker.spy(FibonacciBenchmark, "_get_median_runtime")
+    simulated_timeout = TimeoutSignal("Simulated timeout.")
 
-    def _mock_get_median_runtime(self: FibonacciBenchmark, n: int) -> int:
-        median: float = real_get_median_runtime(self, n)
-        medians.append(median)
-        return median
-
-    mocker.patch.object(
-        FibonacciBenchmark, "_get_median_runtime", _mock_get_median_runtime
-    )
-
-    benchmark: FibonacciBenchmark = FibonacciBenchmark(
-        strategy=strategy, num_runs=3, timeout=1
-    )
-    benchmark.parent = Mock(spec=Connection)
-    benchmark.process = Mock(spec=Process)
-
-    # This needs to be done so that Mock sends the exception using the send command instead of raising it.
-    simulated_timeout: TimeoutSignal = TimeoutSignal("Simulated timeout.")
-    recv_side_effect: Iterator[ResultType] = chain(
-        iter(
-            [
-                0.3,
-                0.3,  # Should return a value close to 0.3 (median of three runs)
-                0.3,
-                0.4,
-                0.5,  # Should return a value close to 0.5 (median of three runs)
-                0.5,
-                0.6,
-                0.7,  # Should return a value close to 0.7 (median of three runs)
-                0.8,
-                0.9,  # Should return a value close to 0.9 (simulated_timeout should be ignored)
-            ]
-        ),
+    # Repeats the TimeoutSignal indefinitely to test whether it is ignored,
+    # and the method returns the highest value found.
+    recv_side_effect = chain(
+        iter([0.3, 0.3, 0.3, 0.4, 0.5, 0.5, 0.6, 0.7, 0.8, 0.9]),
         repeat(simulated_timeout),
     )
-
-    benchmark.parent.recv.side_effect = lambda: next(recv_side_effect)
-
+    parent.recv.side_effect = lambda: next(recv_side_effect)
     best_n, num_digits = benchmark.run()
 
     assert best_n == 8, (
         "Due to the defined return times in recv.side_effect, "
         f"the result should have been 8, but it was {best_n:,}."
     )
-
-    assert num_digits == 1, (
-        f"The number of digits in 8 is 1, but it obtained {num_digits:,}."
+    assert num_digits == NUM_DIGITS_LARGE_NUMBER, (
+        f"The number of digits in 10 raised to the power of {NUM_DIGITS_LARGE_NUMBER - 1:,} "
+        f"is {NUM_DIGITS_LARGE_NUMBER:,}, but it obtained {num_digits:,}."
     )
 
     for i, median in enumerate([0.3, 0.5, 0.7, 0.9]):
-        assert isclose(medians[i], median), (
-            f"The {i + 1}th median should have been {median:,} but was {medians[i]:,}."
+        assert isclose(spy_get_median_runtime.spy_return_list[i], median), (
+            f"The {i + 1}th median should have been {median:,} but was "
+            f"{spy_get_median_runtime.spy_return_list[i]:,}."
         )
 
-    assert benchmark.process.join.call_count == 1, (
-        "The join method of the process should have been called once to close it, "
-        f"but it was called {benchmark.process.join.call_count:,} times."
-    )
-
-    send_number_calls: int = len(benchmark.parent.send.call_args_list)
-    assert send_number_calls == 22, (
-        "It was expected that 22 calls would be made to the send method, "
-        f"but {send_number_calls:,} were made."
-    )
-
-    # Expected returns from _exponential_search and _binary_search
-    for i, n in enumerate([n for n in [1, 2, 4, 8, 16, 12, 9] for _ in range(3)]):
-        value_sent: tuple[Callable[[int], int], tuple[int]] = (
-            benchmark.parent.send.call_args_list[i][0][0]
-        )
-        assert value_sent == (strategy.calculate, (n,)), (
-            f"The {i + 1}th call to the send method should have sent the "
-            f"tuple (MockFibonacciStrategy.calculate, {n:,}), but it sent {value_sent} instead."
-        )
-
-    value_sent = benchmark.parent.send.call_args_list[-1][0][0]
-    assert value_sent is None, (
-        f"The last call to the send method should have sent None, but it sent {value_sent} instead."
-    )
+    expected_ns: list[int] = [n for n in [1, 2, 4, 8, 16, 12, 9] for _ in range(3)]
+    _assert_parent_send_calls(parent, process, strategy.calculate, expected_ns)
